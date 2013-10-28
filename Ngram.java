@@ -6,8 +6,10 @@ public class Ngram {
    private Map<String, Integer> tally1 = new HashMap<String, Integer>();
    private Map<String, Integer> tally2 = new HashMap<String, Integer>();
    private Map<String, Integer> tally3 = new HashMap<String, Integer>();
+  
    private String line;
    private String token;  
+  
    private int token1;
    private int token2;
    private int token3;
@@ -70,13 +72,6 @@ public class Ngram {
          }
       }
       return tally;
-   }
-   
-   public void print_calc(PrintStream ps) {
-      ps.println("\\data\\");
-      ps.println("ngram 1: type=" + tally1.size() + " token=" + token1);
-      ps.println("ngram 2: type=" + tally2.size() + " token=" + token2);
-      ps.println("ngram 3: type=" + tally3.size() + " token=" + token3);
    }
    
    public void print_count(PrintStream ps) {
