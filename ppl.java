@@ -56,23 +56,21 @@ public class ppl {
       
       int sent_num = 0;
       int word_num = 0;
+      int oov_num = 0;
       
       while (test.hasNextLine()) {
          if (test.hasNextLine()) {
             sent_num ++;
             line = "<s> " + test.nextLine() + " </s>";
             String[] tokens = line.split(" ");
-            int sent_word = tokens.length - 2;
-            word_num += sent_word;
+            word_num += tokens.length - 2;
             System.out.println("Sent #" + sent_num + ": " + line);
             calculate(tokens, sent_num);
-            System.out.println("1 sentence, " + sent_word + " words");
-            System.out.println();
          }
       }
       System.out.println();
       System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-      System.out.println("sent_num=" + sent_num + " word_num=" + word_num);
+      System.out.println("sent_num=" + sent_num + " word_num=" + word_num + " oov_num=" + oov_num);
    }
    
    public static void calculate(String[] tokens, int sent_num) {
@@ -83,27 +81,59 @@ public class ppl {
       String token = "";
       String check = "";
       
+      int oov = 0;
+      int cnt = 0;
+      double sum = 0.0;
+      double total;
+      double ppl;
+      
       double prob = 1.0;
       
       // First bigrams:
       token = tokens[0] + " " + tokens[1];
-      if (grams2.get(token) != null && grams1.get(tokens[1]) != null)
-         prob = l2 * Double.parseDouble(grams2.get(token)[2]) + l1 * Double.parseDouble(grams1.get(tokens[1])[2]);
-      else prob = 100.0;
+      if (grams1.get(tokens[1]) != null) {
+         if (grams2.get(token) != null) {
+            prob = l2 * Double.parseDouble(grams2.get(token)[2]) + l1 * Double.parseDouble(grams1.get(tokens[1])[2]);
+            sum += Math.log10(prob);
+            cnt ++;
+         } else {
+            prob = 100.0;
+         }
+      } else {
+         prob = 1000.0;
+         oov ++;
+      }
       probs.add(prob);
       lgprobs.add(Math.log10(prob));
       
       // Other trigrams:
       for (int i = 2; i < tokens.length; i ++) {
          token = tokens[i - 2] + " " + tokens[i - 1] + " " + tokens[i];
-         if (grams3.get(token) != null && grams2.get(tokens[i - 1] + " " + tokens[i]) != null && grams1.get(tokens[i]) != null)
-            prob = l3 * Double.parseDouble(grams3.get(token)[2]) + l2 * Double.parseDouble(grams2.get(tokens[i - 1] + " " + tokens[i])[2]) + l1 * Double.parseDouble(grams1.get(tokens[i])[2]);
-         else prob = 100.0;
+         if (grams1.get(tokens[i]) != null) {
+            if (grams3.get(token) != null && grams2.get(tokens[i - 1] + " " + tokens[i]) != null) {
+               prob = l3 * Double.parseDouble(grams3.get(token)[2]) + l2 * Double.parseDouble(grams2.get(tokens[i - 1] + " " + tokens[i])[2]) + l1 * Double.parseDouble(grams1.get(tokens[i])[2]);
+               sum += Math.log10(prob);
+               cnt ++;
+            } else {
+               prob = 100.0;
+            }
+         } else {
+            prob = 1000.0;
+            oov ++;
+         }
          probs.add(prob);
          lgprobs.add(Math.log10(prob));
       }
       
-      print(probs, tokens);
+      total = - 1.0 * sum / cnt;
+      ppl = Math.pow(10, total);
+      
+      // unknown 3.0; unseen 2.0
+      print(lgprobs, tokens);
+      
+      System.out.println("1 sentence, " + (tokens.length - 2) + " words, " + oov + " OOVs");
+      System.out.println("lgprob=" + total + " ppl=" + ppl);
+      System.out.println();
    }
    
    public static void print(ArrayList<Double> lgprobs, String[] tokens) {
@@ -111,12 +141,25 @@ public class ppl {
       for (int i = 1; i < tokens.length; i ++) {
          if (i == 1) {
             System.out.print(i + ": lg P(" + tokens[i] + " | " + tokens[i - 1] + ") = ");
-            System.out.println(lgprobs.get(0));
+            if (lgprobs.get(0).equals(3.0)) {
+               System.out.println("-inf (unknown word)");
+            } else if (lgprobs.get(0).equals(2.0)) {
+               System.out.print(lgprobs.get(0));
+               System.out.println(" (unseen ngrams)");
+            } else {
+               System.out.println(lgprobs.get(0));
+            }
          } else {
             System.out.print(i + ": lg P(" + tokens[i] + " | " + tokens[i - 2] +  " " + tokens[i - 1] + ") = ");
-            System.out.println(lgprobs.get(i - 1));
+            if (lgprobs.get(i - 1).equals(3.0)) {
+               System.out.println("-inf (unknown word)");
+            } else if (lgprobs.get(i - 1).equals(2.0)) {
+               System.out.print(lgprobs.get(i - 1));
+               System.out.println(" (unseen ngrams)");
+            } else {
+               System.out.println(lgprobs.get(i - 1));
+            }
          }
       }
-      
    }
 }
