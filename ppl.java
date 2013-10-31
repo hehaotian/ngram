@@ -7,10 +7,18 @@ public class ppl {
    public static Map<String, String[]> grams1 = new HashMap<String, String[]>();
    public static Map<String, String[]> grams2 = new HashMap<String, String[]>();
    public static Map<String, String[]> grams3 = new HashMap<String, String[]>();
+   
    public static double l1;
    public static double l2;
    public static double l3;
-
+   
+   public static int sent_num;
+   public static int word_num;
+   public static int oov_num;
+   public static double lgprob_sum;
+   
+   public static int gene_cnt;
+   
    public static void main(String[] args) throws IOException {
    
       Scanner lm = new Scanner(new File(args[0]));
@@ -54,9 +62,10 @@ public class ppl {
       
       ps.println();
       
-      int sent_num = 0;
-      int word_num = 0;
-      int oov_num = 0;
+      sent_num = 0;
+      word_num = 0;
+      oov_num = 0;
+      gene_cnt = 0;
       
       while (test.hasNextLine()) {
          if (test.hasNextLine()) {
@@ -64,17 +73,14 @@ public class ppl {
             line = "<s> " + test.nextLine() + " </s>";
             String[] tokens = line.split(" ");
             word_num += tokens.length - 2;
-            System.out.println("Sent #" + sent_num + ": " + line);
-            calculate(tokens, sent_num);
+            ps.println("Sent #" + sent_num + ": " + line);
+            calculate(tokens, sent_num, ps);
          }
       }
-      
-      System.out.println();
-      System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-      System.out.println("sent_num=" + sent_num + " word_num=" + word_num + " oov_num=" + oov_num);
+      print_conc(ps);
    }
    
-   public static void calculate(String[] tokens, int sent_num) {
+   public static void calculate(String[] tokens, int sent_num, PrintStream ps) {
       
       ArrayList<Double> probs = new ArrayList<Double>();
       ArrayList<Double> lgprobs = new ArrayList<Double>();
@@ -85,6 +91,7 @@ public class ppl {
       
       int oov = 0;
       int cnt = 0;
+      
       double sum = 0.0;
       double total;
       double ppl;
@@ -143,41 +150,56 @@ public class ppl {
          lgprobs.add(Math.log10(prob));
       }
       
-      total = - 1.0 * sum / cnt;
+      total = - sum / cnt;
       ppl = Math.pow(10, total);
       
-      // unknown 3.0; unseen 2.0
-      print(lgprobs, tokens, mark);
+      lgprob_sum += sum;
+      gene_cnt += cnt;
+      oov_num += oov;
       
-      System.out.println("1 sentence, " + (tokens.length - 2) + " words, " + oov + " OOVs");
-      System.out.println("lgprob=" + total + " ppl=" + ppl);
-      System.out.println();
+      // unknown 3.0; unseen 2.0
+      print(lgprobs, tokens, mark, ps);
+      
+      ps.println("1 sentence, " + (tokens.length - 2) + " words, " + oov + " OOVs");
+      ps.println("lgprob=" + sum + " ppl=" + ppl);
+      ps.println();
+      ps.println();
+      ps.println();
    }
    
-   public static void print(ArrayList<Double> lgprobs, String[] tokens, ArrayList<Integer> mark) {
+   public static void print(ArrayList<Double> lgprobs, String[] tokens, ArrayList<Integer> mark, PrintStream ps) {
       
       for (int i = 1; i < tokens.length; i ++) {
          if (i == 1) {
-            System.out.print(i + ": lg P(" + tokens[i] + " | " + tokens[i - 1] + ") = ");
+            ps.print(i + ": lg P(" + tokens[i] + " | " + tokens[i - 1] + ") = ");
             if (mark.get(0).equals(2)) {
-               System.out.println("-inf (unknown word)");
+               ps.println("-inf (unknown word)");
             } else if (mark.get(0).equals(1)) {
-               System.out.print(lgprobs.get(0));
-               System.out.println(" (unseen ngrams)");
+               ps.print(lgprobs.get(0));
+               ps.println(" (unseen ngrams)");
             } else {
-               System.out.println(lgprobs.get(0));
+               ps.println(lgprobs.get(0));
             }
          } else {
-            System.out.print(i + ": lg P(" + tokens[i] + " | " + tokens[i - 2] +  " " + tokens[i - 1] + ") = ");
+            ps.print(i + ": lg P(" + tokens[i] + " | " + tokens[i - 2] +  " " + tokens[i - 1] + ") = ");
             if (mark.get(i - 1).equals(2)) {
-               System.out.println("-inf (unknown word)");
+               ps.println("-inf (unknown word)");
             } else if (mark.get(i - 1).equals(1)) {
-               System.out.print(lgprobs.get(i - 1));
-               System.out.println(" (unseen ngrams)");
+               ps.print(lgprobs.get(i - 1));
+               ps.println(" (unseen ngrams)");
             } else {
-               System.out.println(lgprobs.get(i - 1));
+               ps.println(lgprobs.get(i - 1));
             }
          }
       }
+   }
+   
+   public static void print_conc(PrintStream ps) {
+
+      double final_ppl = Math.pow(10, - lgprob_sum / gene_cnt);
+
+      ps.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+      ps.println("sent_num=" + sent_num + " word_num=" + word_num + " oov_num=" + oov_num);
+      ps.println("lgprob=" + lgprob_sum + " ave_lgprob=" + lgprob_sum / (word_num + sent_num - oov_num) + " ppl=" + final_ppl);
    }
 }

@@ -1,3 +1,3 @@
 #!/bin/sh
 
-java ngram_count $1 $2
+java -Xmx1024m ngram_count $1 $2

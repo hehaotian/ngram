@@ -1,3 +1,3 @@
 #!/bin/sh
 
-java build_lm $1 $2
+java -Xmx1024m build_lm $1 $2
